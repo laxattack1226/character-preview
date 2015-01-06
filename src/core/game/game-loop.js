@@ -1,8 +1,9 @@
-angular.module('game.game-loop', ['game.world-root'])
+angular.module('game.game-loop', ['game.world-root', 'engine.debugger'])
     .run([
         '$rootWorld',
         '$window',
-        function ($rootWorld, $window) {
+        'Debugger',
+        function ($rootWorld, $window, Debugger) {
             'use strict';
 
             var startTime = $window.performance.now() / 1000.0;
@@ -22,9 +23,11 @@ angular.module('game.game-loop', ['game.world-root'])
 
                 $rootWorld.update(_timing.frameTime, _timing.elapsed, _timing.timestamp);
 
+                Debugger.tick(_timing.frameTime);
+
                 lastTimestamp = timestamp;
             }
 
-            window.requestAnimationFrame(onRequestedFrame);
+            $window.requestAnimationFrame(onRequestedFrame);
         }
     ]);

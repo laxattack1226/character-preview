@@ -5,9 +5,13 @@ angular.module('components.scene.camera', ['ces', 'three'])
 
         $componentsProvider.addComponentData({
             'camera': {
+<<<<<<< HEAD
                 // TODO: this needs to be linked to the actual dom element
                 // FIXED: var renderer = new THREE.WebGLRenderer({antialias: true});
                 aspectRatio: renderer.domElement.width / renderer.domElement.height,
+=======
+                aspectRatio: 16 / 9,
+>>>>>>> pr/1
                 nearClip: 0.1,
                 farClip: 1000,
                 fov: 45,

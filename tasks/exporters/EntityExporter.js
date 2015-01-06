@@ -175,7 +175,8 @@ EntityExporter.prototype = {
                         near: object.near,
                         far: object.far
                     };
-                } else if (object instanceof THREE.AmbientLight && object.userData.entity === 'light') {
+                // clara doesn't let you add ambient lights, we hack them into the scene using directional with a specific name
+                } else if ((object instanceof THREE.AmbientLight && object.userData.entity === 'light') || (object.userData.entity === 'light' && object.name === 'AmbientLight')) {
                     data.components.light = {
                         type: 'AmbientLight',
                         color: object.color.getHex()
@@ -209,8 +210,10 @@ EntityExporter.prototype = {
                         groundColor: object.groundColor.getHex()
                     };
                 } else if (object instanceof THREE.Mesh && object.userData.entity === 'model') {
-                    // TODO: parse through geometries to test for stuff like BoxGeometry
+                    var modelType = object.userData.modelType || 'mesh';
+
                     data.components.model = {
+                        type: modelType,
                         geometry: parseGeometry(object.geometry),
                         material: parseMaterial(object.material)
                     };

@@ -18,8 +18,10 @@ module.exports = {
     bower: {
         packages: [
             'angular',
+            'angular-ui-router',
             'howler.js',
-            'Keypress'
+            'Keypress',
+            'underscore'
         ],
         localFolders: [
             'src/lib'
@@ -27,13 +29,20 @@ module.exports = {
         filesNeeded: {
             js: [
                 'angular/angular.js',
+                'angular-ui-router/release/angular-ui-router.js',
                 'howler.js/howler.js',
                 'Keypress/keypress.js',
+                'underscore/underscore.js',
+                'lib/jszip.js',
 
                 'lib/game-shim.js',
+                'lib/hand-1.3.8.js',
                 'lib/three.js',
                 'lib/three-angular.js',
-                'lib/howler-angular.js'
+                'lib/threeoctree.js',
+                'lib/howler-angular.js',
+                'lib/ammo.js',
+                'lib/ammo-angular.js',
             ],
 
             less: [],

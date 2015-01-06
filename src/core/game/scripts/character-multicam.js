@@ -23,6 +23,12 @@ angular.module('game.scripts.character-multicam', ['components.script'])
 
         var targetPosition = new THREE.Vector3( 0, 0, 0 );
 
+        var originalThirdPersonPosition = new THREE.Vector3(0, 1.5, 4);
+        var originalThirdPersonPositionLength = originalThirdPersonPosition.length();
+
+        var originalCameraThirdPersonLookAtTargetOffset = new THREE.Vector3(0, 1, -1);
+        var cameraThirdPersonLookAtTargetOffset = originalCameraThirdPersonLookAtTargetOffset.clone();
+
         var mouseSpeed = 0.004;
 
         var PI_2 = Math.PI / 2;
@@ -32,6 +38,11 @@ angular.module('game.scripts.character-multicam', ['components.script'])
                 fn.apply(scope, arguments);
             };
         };
+
+        var detachedCam;
+        var localCam;
+
+        var cameraThirdPersonLookAtTarget = new THREE.Vector3();
 
         var MultiCamScript = function (entity, world) {
             var me = this;
@@ -44,6 +55,21 @@ angular.module('game.scripts.character-multicam', ['components.script'])
             if (cameraComponent) {
                 cameraComponent.camera.rotation.set( 0, 0, 0 );
             }
+
+            detachedCam = cameraComponent.camera.clone();
+
+            // TODO: move this event listener some place else
+            // maybe to constructor of Camera somehow?
+            // it's annoying that the clone() doesn't do this
+            window.addEventListener('resize', function () {
+                detachedCam.aspect = window.innerWidth / window.innerHeight;
+                detachedCam.updateProjectionMatrix();
+            }, false );
+
+            entity.parent.add(detachedCam);
+
+            localCam = cameraComponent.camera;
+            cameraComponent.camera = detachedCam;
 
             IbConfig.get('domElement').addEventListener( 'mousemove', bind(this, this.onMouseMove), false );
         };
@@ -73,13 +99,68 @@ angular.module('game.scripts.character-multicam', ['components.script'])
 
             if (cameraComponent) {
                 if (camMode === camModeEnum.FirstPerson) {
-                    cameraComponent.camera.lookAt(targetPosition);
+                    localCam.lookAt(targetPosition);
 
-                    this.entity.quaternion.copy(cameraComponent.camera.quaternion);
-                    cameraComponent.camera.quaternion.copy(new THREE.Quaternion());
+                    this.entity.quaternion.copy(localCam.quaternion);
+                    localCam.quaternion.copy(new THREE.Quaternion());
                 }
                 if (camMode === camModeEnum.ThirdPerson) {
-                    cameraComponent.camera.position.set(0, 1, 4);
+
+                    localCam.position.copy(originalThirdPersonPosition);
+
+                    cameraThirdPersonLookAtTargetOffset.copy(originalCameraThirdPersonLookAtTargetOffset, dt*5);
+
+
+                    // Make sure the cam doesn't go through walls here
+                    // by raycasting
+                    var scenes = this.world.getEntities('scene');
+
+                    if (scenes.length) {
+                        var octree = scenes[0].octree;
+
+                        var rotatedOriginalThirdPersonPosition = originalThirdPersonPosition.clone();
+                        rotatedOriginalThirdPersonPosition.applyQuaternion( this.entity.quaternion );
+                        rotatedOriginalThirdPersonPosition.normalize();
+
+                        var ray = new THREE.Raycaster(this.entity.position, rotatedOriginalThirdPersonPosition);
+
+                        // debug.drawVector(rotatedOriginalThirdPersonPosition, this.entity.position);
+
+                        var intersections = ray.intersectOctreeObjects(octree.objects);
+
+                        if (intersections.length) {
+                            var dist = intersections[0].distance;
+                            // debug.watch('cam ray distance', dist);
+
+                            dist -= 1;
+
+                            if (dist < originalThirdPersonPositionLength) {
+                                // cameraThirdPersonLookAtTargetOffset.z = -10;
+                                cameraThirdPersonLookAtTargetOffset.lerp(originalCameraThirdPersonLookAtTargetOffset.clone().add(new THREE.Vector3(0, -5, -20)), dt*5);
+                            }
+                            else {
+                                // cameraThirdPersonLookAtTargetOffset.copy(originalCameraThirdPersonLookAtTargetOffset, dt*5);
+                            }
+
+                            localCam.position.normalize();
+                            localCam.position.multiplyScalar(dist > originalThirdPersonPositionLength ?
+                                originalThirdPersonPositionLength : dist);
+                            localCam.position.y = Math.max(localCam.position.y, 0.5);
+                        }
+                        else {
+                            localCam.position.copy(originalThirdPersonPosition);
+                            // cameraThirdPersonLookAtTargetOffset.copy(originalCameraThirdPersonLookAtTargetOffset, dt*5);
+                        }
+                    }
+
+                    var worldPos = new THREE.Vector3();
+                    worldPos.setFromMatrixPosition(localCam.matrixWorld);
+                    detachedCam.position.lerp(worldPos, dt*5);
+
+
+                    cameraThirdPersonLookAtTargetOffset.applyQuaternion( this.entity.quaternion );
+                    cameraThirdPersonLookAtTarget.lerp(this.entity.position.clone().add(cameraThirdPersonLookAtTargetOffset), dt*5);
+                    detachedCam.lookAt(cameraThirdPersonLookAtTarget);
                 }
             }
         };
